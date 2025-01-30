@@ -21,7 +21,14 @@ def get_topic_list_from_datasets(datasets, labels_column, topics_property, confi
         list: A list of dictionaries, each containing the "tm_id" and "labels" from the datasets.
     """
     all_topics = []
-    for dataset in datasets.values():
+    for dataset_name, dataset in datasets.copy().items():
+        
+        if not dataset["use"]:
+            print(dataset_name + " not in use, skipping...")
+            del datasets[dataset_name]
+            continue
+        print("getting labels from " + dataset_name)
+        
         df_dataset =  Dataset.get(dataset["output_dataset_name"]).read_table(format="pandas")
         if config["test_mode"]["is_active"]:
             df_dataset = df_dataset[0:config["test_mode"]["row_limit"]]
@@ -97,3 +104,21 @@ def flatten_list(array):
         else:
             result.append(item)
     return result
+
+def add_topic_flag_cols(df_labels_and_topics, current_topics):
+    """
+    Adds flag columns to the dataframe for each topic in the current topics list.
+
+    This function iterates over the list of current topics and adds a new column to the dataframe `df_labels_and_topics` for each topic. Each new column is a boolean flag indicating whether the topic is present in the "Topics" column of the dataframe. 
+    
+    Args:
+        df_labels_and_topics (pandas.DataFrame): A dataframe containing a "Topics" column with lists of topics.
+        current_topics (list of str): A list of topics to create flag columns for.
+
+    Returns:
+        pandas.DataFrame: The modified dataframe with added topic flag columns
+    """
+    for topic in current_topics:
+        df_labels_and_topics[topic] = df_labels_and_topics["Topics"].apply(lambda x: topic in x)
+    
+    return df_labels_and_topics
